@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readDb, writeDb } from "@/lib/db";
-import { TaskType } from "@/types/boardTypes";
+import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -9,55 +8,43 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   const { userId } = await auth();
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { id } = await params;
   const body = await req.json();
-  const db = readDb();
 
-  const index = db.tasks.findIndex(
-    (t: TaskType) => t.id === id && t.userId === userId,
-  );
-  if (index === -1) {
-    return NextResponse.json({ error: "Task not found" }, { status: 404 });
-  }
-
+  // Reorder — just update columnId
   if (body.newIndex !== undefined) {
-    const columnId = body.columnId;
-    const columnTasks = db.tasks.filter(
-      (t: TaskType) => t.columnId === columnId,
-    ); // ← add
-    const otherTasks = db.tasks.filter(
-      (t: TaskType) => t.columnId !== columnId,
-    ); // ← add
-    const oldIndex = columnTasks.findIndex((t: TaskType) => t.id === id);
-    const reordered = [...columnTasks];
-    const [moved] = reordered.splice(oldIndex, 1);
-    reordered.splice(body.newIndex, 0, moved);
-    db.tasks = [...otherTasks, ...reordered];
-  } else {
-    db.tasks[index] = { ...db.tasks[index], ...body };
+    await prisma.task.update({
+      where: { id },
+      data: { columnId: body.columnId },
+    });
+    return NextResponse.json({ success: true });
   }
 
-  writeDb(db);
-  return NextResponse.json({ success: true });
+  // Edit
+  const task = await prisma.task.update({
+    where: { id },
+    data: {
+      ...(body.title !== undefined && { title: body.title }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.priority !== undefined && { priority: body.priority }),
+      ...(body.dueDate !== undefined && { dueDate: body.dueDate }),
+      ...(body.label !== undefined && { label: body.label }),
+      ...(body.columnId !== undefined && { columnId: body.columnId }),
+    },
+  });
+
+  return NextResponse.json({ task });
 }
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const { userId } = await auth();
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { id } = await params;
-  const db = readDb();
 
-  const index = db.tasks.findIndex(
-    (t: TaskType) => t.id === id && t.userId === userId,
-  );
-  if (index === -1) {
-    return NextResponse.json({ error: "Task not found" }, { status: 404 });
-  }
+  await prisma.task.delete({ where: { id } });
 
-  db.tasks = db.tasks.filter(
-    (t: TaskType) => !(t.id === id && t.userId === userId),
-  );
-  writeDb(db);
   return NextResponse.json({ success: true });
 }

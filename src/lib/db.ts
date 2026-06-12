@@ -1,45 +1,15 @@
-import fs from "fs";
-import path from "path";
-import { TaskType } from "@/types/boardTypes";
+import { PrismaClient } from "@prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
-const DB_PATH = path.join(process.cwd(), "src/lib/data.json");
-
-const defaultData: { tasks: TaskType[] } = {
-  tasks: [
-    {
-      id: "1",
-      title: "Task 1",
-      columnId: "todo",
-      priority: "medium",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      title: "Task 2",
-      columnId: "inprogress",
-      priority: "high",
-      createdAt: new Date().toISOString(),
-    },
-  ],
-};
-
-export function readDb(): { tasks: TaskType[] } {
-  try {
-    if (!fs.existsSync(DB_PATH)) {
-      writeDb(defaultData);
-      return defaultData;
-    }
-    const raw = fs.readFileSync(DB_PATH, "utf-8");
-    return JSON.parse(raw) as { tasks: TaskType[] };
-  } catch {
-    return defaultData;
-  }
+function createPrismaClient() {
+  const adapter = new PrismaNeon({
+    connectionString: process.env.DATABASE_URL!,
+  });
+  return new PrismaClient({ adapter });
 }
 
-export function writeDb(data: { tasks: TaskType[] }): void {
-  try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
-  } catch (e) {
-    console.error("Failed to write db:", e);
-  }
-}
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
