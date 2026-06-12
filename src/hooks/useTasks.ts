@@ -2,13 +2,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchTasks, createTask, updateTask, deleteTask } from "@/lib/api";
 import { Priority, TaskType } from "@/types/boardTypes";
 import toast from "react-hot-toast";
-
+import { useUser } from "@clerk/nextjs";
 export const TASKS_KEY = ["tasks"];
 
 export const useTasks = () => {
+  const { user } = useUser();
   return useQuery({
-    queryKey: TASKS_KEY,
+    queryKey: ["tasks", user?.id],
     queryFn: fetchTasks,
+    enabled: !!user?.id,
   });
 };
 

@@ -10,6 +10,8 @@ export type TaskType = {
   description?: string;
   dueDate?: string;
   createdAt: string;
+  label?: string;
+  userId?: string;
 };
 export type Priority = "low" | "medium" | "high";
 

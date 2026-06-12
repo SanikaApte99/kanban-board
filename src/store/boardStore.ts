@@ -6,9 +6,17 @@ type BoardStore = {
   setTasks: (tasks: TaskType[]) => void;
   moveTask: (taskId: string, newColumnId: string) => void;
   reorderTask: (columnId: string, oldIndex: number, newIndex: number) => void;
+
+  // Search & filter
+  searchQuery: string;
+  activeColumn: "all" | "todo" | "inprogress" | "done";
+  setSearchQuery: (query: string) => void;
+  setActiveColumn: (columnId: "all" | "todo" | "inprogress" | "done") => void;
+  clearSearch: () => void;
+  getFilteredTasks: () => TaskType[];
 };
 
-export const useboardStore = create<BoardStore>((set) => ({
+export const useboardStore = create<BoardStore>((set, get) => ({
   tasks: [],
 
   setTasks: (tasks) => set({ tasks }),
@@ -29,4 +37,31 @@ export const useboardStore = create<BoardStore>((set) => ({
       reordered.splice(newIndex, 0, moved);
       return { tasks: [...otherTasks, ...reordered] };
     }),
+
+
+  searchQuery: "",
+  activeColumn: "all",
+
+  setSearchQuery: (query) => set({ searchQuery: query }),
+
+  setActiveColumn: (columnId) => set({ activeColumn: columnId }),
+
+  clearSearch: () => set({ searchQuery: "", activeColumn: "all" }),
+
+  getFilteredTasks: () => {
+    const { tasks, searchQuery, activeColumn } = get();
+    const q = searchQuery.trim().toLowerCase();
+
+    return tasks.filter((task) => {
+      const matchesColumn =
+        activeColumn === "all" || task.columnId === activeColumn;
+
+      const matchesQuery =
+        q === "" ||
+        task.title.toLowerCase().includes(q) ||
+        (task.description ?? "").toLowerCase().includes(q);
+
+      return matchesColumn && matchesQuery;
+    });
+  },
 }));

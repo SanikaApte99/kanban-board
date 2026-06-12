@@ -4,9 +4,8 @@ import {
   CardContent,
   Stack,
   Typography,
-  Chip,
-  useTheme,
   Box,
+  useTheme,
 } from "@mui/material";
 import TaskCard from "../TaskCard/TaskCard";
 import AddTask from "../AddTask/AddTask";
@@ -16,6 +15,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { TaskType } from "@/types/boardTypes";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 
 type Props = {
   title: string;
@@ -23,15 +23,60 @@ type Props = {
   tasks: TaskType[];
 };
 
-const columnColors: Record<string, string> = {
-  todo: "#378ADD",
-  inprogress: "#EF9F27",
-  done: "#639922",
+const columnTheme: Record<
+  string,
+  {
+    headerBg: string;
+    headerBgDark: string;
+    titleColor: string;
+    titleColorDark: string;
+    countBg: string;
+    countBgDark: string;
+    countColor: string;
+    countColorDark: string;
+    dotsColor: string;
+  }
+> = {
+  todo: {
+    headerBg: "#E6F1FB",
+    headerBgDark: "#0c1e30",
+    titleColor: "#0C447C",
+    titleColorDark: "#85B7EB",
+    countBg: "#B5D4F4",
+    countBgDark: "#12325a",
+    countColor: "#0C447C",
+    countColorDark: "#85B7EB",
+    dotsColor: "#185FA5",
+  },
+  inprogress: {
+    headerBg: "#FAEEDA",
+    headerBgDark: "#241908",
+    titleColor: "#633806",
+    titleColorDark: "#FAC775",
+    countBg: "#FAC775",
+    countBgDark: "#3a2505",
+    countColor: "#633806",
+    countColorDark: "#FAC775",
+    dotsColor: "#854F0B",
+  },
+  done: {
+    headerBg: "#EAF3DE",
+    headerBgDark: "#0d1f07",
+    titleColor: "#27500A",
+    titleColorDark: "#97C459",
+    countBg: "#C0DD97",
+    countBgDark: "#162e06",
+    countColor: "#27500A",
+    countColorDark: "#97C459",
+    dotsColor: "#3B6D11",
+  },
 };
 
 export default function Column({ title, columnId, tasks }: Props) {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const columnTasks = tasks.filter((task) => task.columnId === columnId);
+  const col = columnTheme[columnId] ?? columnTheme.todo;
 
   const { setNodeRef } = useDroppable({ id: columnId });
   const taskIds = columnTasks.map((t) => t.id);
@@ -41,55 +86,68 @@ export default function Column({ title, columnId, tasks }: Props) {
       ref={setNodeRef}
       sx={{
         minHeight: { xs: 150, sm: 300 },
-        backgroundColor: theme.palette.mode === "dark" ? "#161b22" : "#ffffff",
-        border: `0.5px solid ${theme.palette.mode === "dark" ? "#30363d" : "#d0d7de"}`,
+        backgroundColor: "background.paper",
+        border: "0.5px solid",
+        borderColor: "divider",
         boxShadow: "none",
-        borderRadius: 2,
+        borderRadius: "10px",
+        overflow: "hidden",
       }}
     >
-      <CardContent>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{
-            mb: 1.5,
-            pb: 1.5,
-            borderBottom: `0.5px solid ${theme.palette.mode === "dark" ? "#30363d" : "#e1e4e8"}`,
-          }}
-        >
-          <Stack direction="row" alignItems="center" gap={1}>
-            <Box
-              sx={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: columnColors[columnId],
-                flexShrink: 0,
-              }}
-            />
-            <Typography variant="subtitle1" fontWeight={500}>
-              {title}
-            </Typography>
-          </Stack>
-
-          <Chip
-            label={columnTasks.length}
-            size="small"
+      {/* Color-block header */}
+      <Box
+        sx={{
+          px: 1.75,
+          py: 1.25,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: isDark ? col.headerBgDark : col.headerBg,
+        }}
+      >
+        <Stack direction="row" alignItems="center" gap={0.875}>
+          <Typography
             sx={{
-              height: 20,
-              fontSize: "0.7rem",
-              backgroundColor:
-                theme.palette.mode === "dark" ? "#21262d" : "#f0f2f5",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              color: isDark ? col.titleColorDark : col.titleColor,
+              userSelect: "none",
             }}
-          />
+          >
+            {title}
+          </Typography>
+          <Box
+            sx={{
+              fontSize: "0.625rem",
+              fontWeight: 500,
+              px: "7px",
+              py: "1px",
+              borderRadius: "20px",
+              background: isDark ? col.countBgDark : col.countBg,
+              color: isDark ? col.countColorDark : col.countColor,
+              lineHeight: 1.6,
+            }}
+          >
+            {columnTasks.length}
+          </Box>
         </Stack>
+        <MoreHorizIcon
+          sx={{
+            fontSize: 18,
+            color: isDark ? col.titleColorDark : col.dotsColor,
+            cursor: "pointer",
+            opacity: 0.7,
+            "&:hover": { opacity: 1 },
+          }}
+        />
+      </Box>
 
+      <CardContent sx={{ px: 1.25, pt: 1.25, pb: "12px !important" }}>
         {columnTasks.length === 0 && (
           <Typography
             variant="body2"
             color="text.disabled"
-            sx={{ textAlign: "center", py: 4 }}
+            sx={{ textAlign: "center", py: 4, fontSize: "0.75rem" }}
           >
             No tasks yet
           </Typography>
@@ -106,11 +164,31 @@ export default function Column({ title, columnId, tasks }: Props) {
               dueDate={task.dueDate}
               createdAt={task.createdAt}
               columnId={task.columnId}
+              label={task.label}
             />
           ))}
         </SortableContext>
 
-        <AddTask columnId={columnId} />
+        {/* Add task row */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.75,
+            mt: 1,
+            px: 1,
+            py: 0.875,
+            borderRadius: "6px",
+            cursor: "pointer",
+            transition: "background 0.15s",
+            "&:hover": {
+              background: "action.hover",
+              bgcolor: "action.hover",
+            },
+          }}
+        >
+          <AddTask columnId={columnId} />
+        </Box>
       </CardContent>
     </Card>
   );

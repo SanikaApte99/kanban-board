@@ -15,6 +15,7 @@ export const createTask = async (payload: {
   priority: Priority;
   description?: string;
   dueDate?: string;
+  label?: string;
 }): Promise<TaskType> => {
   const res = await fetch(BASE, {
     method: "POST",
